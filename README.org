@@ -1,4 +1,4 @@
-* Binary-Linear-Algebra  - Linear algebra over F2 in Common Lisp
+* binary-linear-algebra  - Linear algebra over F2 in Common Lisp
 
 ** Usage
 
