@@ -3,11 +3,12 @@
   :author "Selwyn Simsek"
   :license "BSD 2"
   :depends-on ("metabang-bind"
-               "defstar"
+               "zr-utils"
                "iterate")
   :components ((:module "src"
                 :components
-                ((:file "main"))))
+                ((:file "main")
+                 (:file "aliases"))))
   :description "Linear algebra over 𝔽₂ in Common Lisp"
   :in-order-to ((test-op (test-op "binary-linear-algebra/tests"))))
 

@@ -1,6 +1,10 @@
-(uiop:define-package binary-linear-algebra
-  (:use #:cl))
-(in-package #:binary-linear-algebra)
+(uiop:define-package #:com.selwynsimsek.binary-linear-algebra
+  (:use #:cl)
+  (:shadowing-import-from #:zr-utils #:define-function)
+  (:shadowing-import-from #:metabang-bind #:bind))
+
+(in-package #:com.selwynsimsek.binary-linear-algebra)
+
 
 (defun binary-transpose (matrix)
   "Returns the bt of a binary matrix."
@@ -10,7 +14,3 @@
             do (loop for j from 0 below n
                      do (setf (aref result j i) (aref matrix i j))))
       result)))
-
-(define-symbol-macro bt binary-transpose)
-
-(export '(bt binary-transpose))
