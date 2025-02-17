@@ -7,7 +7,8 @@
                "iterate")
   :components ((:module "src"
                 :components
-                ((:file "main")
+                ((:file "package")
+                 (:file "routines")
                  (:file "aliases"))))
   :description "Linear algebra over 𝔽₂ in Common Lisp"
   :in-order-to ((test-op (test-op "binary-linear-algebra/tests"))))
