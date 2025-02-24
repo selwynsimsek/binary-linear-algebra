@@ -77,12 +77,17 @@
 ;; Properties
 
 (defun binary-vector-p (v)
-  )
+  (and (arrayp v)
+       (= 1 (array-rank v))
+       (eq (upgraded-array-element-type 'bit) (array-element-type v))))
 
-(defun binary-matrix-p (m))
+(defun binary-matrix-p (v)
+  (and (arrayp v)
+       (= 2 (array-rank v))
+       (eq (upgraded-array-element-type 'bit) (array-element-type v))))
 
 (defun binary-matrix-square-p (m)
-  (and (= 2 (array-rank m))
+  (and (binary-matrix-p m)
        (= (array-dimension m 0) (array-dimension m 1))))
 
 (defun binary-matrix-permutation-p (m)
@@ -91,6 +96,11 @@
          (loop for i from 0 below n always
                                     (and (= 1 (loop for j from 0 below n counting (not (zerop (aref m i j)))))
                                          (= 1 (loop for j from 0 below n counting (not (zerop (aref m j i))))))))))
+
+(defun binary-matrix-lower-triangular-p (m))
+(defun binary-matrix-upper-triangular-p (m))
+(defun binary-matrix-lower-triangular-unit-p (m))
+(defun binary-matrix-upper-triangular-unit-p (m))
 
 ;; Symplectic properties
 
