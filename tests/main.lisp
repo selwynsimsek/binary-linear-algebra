@@ -52,4 +52,8 @@
             (m (gen-integer :max 10 :min 0)))
     (for-all ((a (gen-binary-matrix m n)))
       (bind (((:values p l f q r) (plfqr a)))
+        (is (binary-matrix-permutation-p p))
+        (is (binary-matrix-permutation-p q))
+        (is (binary-matrix-lower-triangular-unit-p l))
+        (is (binary-matrix-upper-triangular-unit-p f))
         (is (bmm= a (bmm* p l f q)))))))

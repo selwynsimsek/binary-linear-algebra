@@ -51,3 +51,12 @@
 
 (function-alias plfq-decomposition plfq plfqr)
 (function-alias invert-binary-matrix ibm)
+
+(function-alias binary-vector-p bv?)
+(function-alias binary-matrix-p bm?)
+(function-alias binary-matrix-permutation-p bmperm?)
+(function-alias binary-matrix-square-p bmsq?)
+(function-alias binary-matrix-lower-triangular-p bmlt?)
+(function-alias binary-matrix-upper-triangular-p bmut?)
+(function-alias binary-matrix-lower-triangular-unit-p bmltu?)
+(function-alias binary-matrix-upper-triangular-unit-p bmutu?)

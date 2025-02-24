@@ -3,6 +3,9 @@
 
 (in-package #:com.selwynsimsek.binary-linear-algebra)
 
+;;; Types
+(deftype binary-matrix () '(simple-array bit (* *)))
+(deftype binary-vector () '(simple-array bit (*)))
 ;;; Useful macros
 
 (defmacro with-return-binary-array (name dimensions &body rest)
@@ -79,12 +82,12 @@
 (defun binary-vector-p (v)
   (and (arrayp v)
        (= 1 (array-rank v))
-       (eq (upgraded-array-element-type 'bit) (array-element-type v))))
+       (eq 'bit (array-element-type v))))
 
 (defun binary-matrix-p (v)
   (and (arrayp v)
        (= 2 (array-rank v))
-       (eq (upgraded-array-element-type 'bit) (array-element-type v))))
+       (eq 'bit (array-element-type v))))
 
 (defun binary-matrix-square-p (m)
   (and (binary-matrix-p m)
@@ -97,10 +100,30 @@
                                     (and (= 1 (loop for j from 0 below n counting (not (zerop (aref m i j)))))
                                          (= 1 (loop for j from 0 below n counting (not (zerop (aref m j i))))))))))
 
-(defun binary-matrix-lower-triangular-p (m))
-(defun binary-matrix-upper-triangular-p (m))
-(defun binary-matrix-lower-triangular-unit-p (m))
-(defun binary-matrix-upper-triangular-unit-p (m))
+(defun binary-matrix-lower-triangular-p (a)
+  (and (binary-matrix-p a)
+       (bind (((m n) (array-dimensions a)))
+         (loop for i from 0 below m always
+               (loop for j from (1+ i) below n always (zerop (aref a i j)))))))
+
+(defun binary-matrix-upper-triangular-p (a)
+  (and (binary-matrix-p a)
+       (bind (((m n) (array-dimensions a)))
+         (loop for i from 0 below m always
+                                    (loop for j from 0 below (min i n) always (zerop (aref a i j)))))))
+
+(defun binary-matrix-unit-diagonal-p (m)
+  (and (binary-matrix-p m)
+       (loop for i from 0 below (min (array-dimension m 0) (array-dimension m 1))
+             always (= 1 (aref m i i)))))
+
+(defun binary-matrix-lower-triangular-unit-p (m)
+  (and (binary-matrix-unit-diagonal-p m)
+       (binary-matrix-lower-triangular-p m)))
+
+(defun binary-matrix-upper-triangular-unit-p (m)
+  (and (binary-matrix-unit-diagonal-p m)
+       (binary-matrix-upper-triangular-p m)))
 
 ;; Symplectic properties
 
