@@ -1,0 +1,9 @@
+#+TITLE: Overview
+#+AUTHOR: Selwyn Simsek
+
+This document summarises the features that binary-linear-algebra provides.
+
+* Creating vectors and matrices
+* Linear algebra
+* Random vectors and matrices
+* Decompositions
