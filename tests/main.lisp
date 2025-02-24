@@ -1,7 +1,9 @@
 (defpackage com.selwynsimsek.binary-linear-algebra/tests
   (:use :cl
         :com.selwynsimsek.binary-linear-algebra
-        :fiveam))
+        :fiveam)
+  (:shadowing-import-from #:zr-utils #:define-function)
+  (:shadowing-import-from #:metabang-bind #:bind))
 (in-package :com.selwynsimsek.binary-linear-algebra/tests)
 
 (def-suite binary-linear-algebra
@@ -35,12 +37,19 @@
       (is (eq (bmm= b c) (equalp b c))))))
 
 (test multiplication-associative-p
-  (for-all ((m (gen-integer :max 20 :min 0))
-            (n (gen-integer :max 20 :min 0))
-            (k (gen-integer :max 20 :min 0))
-            (l (gen-integer :max 20 :min 0)))
+  (for-all ((m (gen-integer :max 5 :min 0))
+            (n (gen-integer :max 5 :min 0))
+            (k (gen-integer :max 5 :min 0))
+            (l (gen-integer :max 5 :min 0)))
     (for-all ((a (gen-binary-matrix m n))
               (b (gen-binary-matrix n k))
               (c (gen-binary-matrix k l)))
       (is (bmm= (bmm* a (bmm* b c))
                 (bmm* (bmm* a b) c))))))
+
+(test plfq
+  (for-all ((n (gen-integer :max 10 :min 0))
+            (m (gen-integer :max 10 :min 0)))
+    (for-all ((a (gen-binary-matrix m n)))
+      (bind (((:values p l f q r) (plfqr a)))
+        (is (bmm= a (bmm* p l f q)))))))

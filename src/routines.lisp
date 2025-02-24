@@ -74,6 +74,24 @@
 
 (defun mod2 (n) (mod n 2))
 
+;; Properties
+
+(defun binary-vector-p (v)
+  )
+
+(defun binary-matrix-p (m))
+
+(defun binary-matrix-square-p (m)
+  (and (= 2 (array-rank m))
+       (= (array-dimension m 0) (array-dimension m 1))))
+
+(defun binary-matrix-permutation-p (m)
+  (and (binary-matrix-square-p m)
+       (bind ((n (array-dimension m 0)))
+         (loop for i from 0 below n always
+                                    (and (= 1 (loop for j from 0 below n counting (not (zerop (aref m i j)))))
+                                         (= 1 (loop for j from 0 below n counting (not (zerop (aref m j i))))))))))
+
 ;; Symplectic properties
 
 (defun binary-symplectic-matrix-size (matrix)
@@ -158,9 +176,19 @@
                                                             (* (aref matrix i j)
                                                                (aref vector j)))))))))
 
-(defun two-arg-binary-matrix-matrix-sum (matrix-1 matrix-2))
+(defun two-arg-binary-matrix-matrix-sum (matrix-1 matrix-2)
+  (bind (((m n) (array-dimensions matrix-1))
+         ((m1 n1) (array-dimensions matrix-2)))
+    (assert (= m m1))
+    (assert (= n n1))
+    (with-return-binary-array return-array (m n)
+      (loop for i from 0 below m do
+            (loop for j from 0 below n do
+                  (setf (aref return-array i j)
+                        (mod2 (+ (aref matrix-1 i j) (aref matrix-2 i j)))))))))
 
-(defun binary-matrix-matrix-sum (&rest matrices))
+(defun binary-matrix-matrix-sum (&rest matrices)
+  (reduce #'two-arg-binary-matrix-matrix-sum matrices))
 
 (defun two-arg-binary-vector-vector-sum (vector-1 vector-2)
   (bit-xor vector-1 vector-2))
@@ -261,6 +289,151 @@
 
 ;;;; Decompositions
 
-(defun plfq-decomposition (matrix)
-  "Returns the PLFQ decomposition (together with the rank)."
-  (error "not implemented yet"))
+(defun block-matrix  (a1 a2 a3 a4)
+  "Creates a block matrix. $A_2$ or $A_3$ may be nil, in which case zeroes are filled in."
+  (destructuring-bind (m1 n1) (array-dimensions a1)
+    (destructuring-bind (m4 n4) (array-dimensions a4)
+      (let ((return-matrix (binary-zero-matrix (+ m1 m4) (+ n1 n4))))
+        (loop for i from 0 below m1 do
+          (loop for j from 0 below n1 do
+            (setf (aref return-matrix i j) (aref a1 i j))))
+        (loop for i from 0 below m4 do
+          (loop for j from 0 below n4 do
+            (setf (aref return-matrix (+ i m1) (+ j n1)) (aref a4 i j))))
+        (when a2
+          (loop for i from 0 below m1 do
+            (loop for j from 0 below n4 do
+              (setf (aref return-matrix i (+ j n1)) (aref a2 i j)))))
+        (when a3
+          (loop for i from 0 below m4 do
+            (loop for j from 0 below n1 do
+              (setf (aref return-matrix (+ i m1) j) (aref a3 i j)))))
+        return-matrix))))
+
+(defun split-columnwise
+    (a &optional (split-index (floor (/ (array-dimension a 1) 2))))
+  "Returns two matrices $A_!$ and $A_2$ that are the left and right halves of $A$ split columnwise."
+  (destructuring-bind (m n) (array-dimensions a)
+    (let* ((a1 (binary-zero-matrix m split-index))
+           (a2 (binary-zero-matrix m (- n split-index))))
+      (loop for i from 0 below m do
+            (loop for j from 0 below split-index do
+              (setf (aref a1 i j) (aref a i j))))
+      (loop for i from 0 below m do
+        (loop for j from split-index below n do
+          (setf (aref a2 i (- j split-index)) (aref a i j))))
+      (values a1 a2))))
+
+(defun split-rowwise (a r1)
+  "Returns two matrices $A_3$ and $A_4$ that are the upper and lower halves of $A$ split rowwise,
+   and that $A_3$ has $r_1$ rows."
+  (destructuring-bind (m n) (array-dimensions a)
+    (let ((a3 (binary-zero-matrix r1 n))
+          (a4 (binary-zero-matrix (- m r1) n)))
+      (loop for i from 0 below r1 do
+        (loop for j from 0 below n do
+          (setf (aref a3 i j) (aref a i j))))
+      (loop for i from r1 below m do
+        (loop for j from 0 below n do
+          (setf (aref a4 (- i r1) j) (aref a i j))))
+      (values a3 a4))))
+
+(defun ple-decomposition (a)
+  "Input: $$A \in \mathbb F_2^{m \times n}$$ , Output: $(P,L,E)$ a PLE decomposition of $$A$$.
+   Given any matrix $A \in F_2^{ m \times n}$  of rank $$r$$, there is a PLE decomposition $A = P LE$ where $P$ is a
+   $n \times n$ permutation matrix, $L$ is a $m \times r$ lower triangular matrix and $E$ is a $r \times n$ matrix in
+   row-echelon form, with unit leading coefficients.
+   This method returns $(P,L,E)$ given $A$.
+   Implementation taken from arXiv:1204.3735v1."
+  (destructuring-bind (m n) (array-dimensions a)
+    (if (= n 0)
+        (values (bim m) (binary-zero-matrix m 0) (binary-zero-matrix 0 0))
+        (if (= n 1)                     ; step 1
+            (if (loop for i from 0 below m always (zerop (aref a i 0)))
+                (return-from ple-decomposition
+                  (values (bim m) (binary-zero-matrix m 0) (binary-zero-matrix 0 1))) ; step 2
+                (let* ((j (loop for k from 0 below m when (not (zerop (aref a k 0))) return k))
+                       (p (transposition-permutation-matrix 0 j m))) ; step 3
+                  (values p (bmm* p a) (bsm 1))))                    ; step 4
+            (multiple-value-bind (a1 a2) (split-columnwise a)        ; step 5
+              (multiple-value-bind (p1 l1 e1) (ple-decomposition a1) ; step 6
+                (let ((r1 (array-dimension e1 0)))
+                  (setf a2 (bmm* (bt p1) a2)) ; step 7
+                  (multiple-value-bind (a3 a4) (split-rowwise a2 r1)
+                    (multiple-value-bind (l1-1 l1-2) (split-rowwise l1 r1)
+                      (setf a3 (ltrsm l1-1 a3))          ; step 8
+                      (setf a4 (bmm+ a4 (bmm* l1-2 a3))) ; step 9
+                      (multiple-value-bind (p2 l2 e2) (ple-decomposition a4) ; step 10
+                        (values         ; step 10
+                         (bmm* p1 (block-matrix (bim r1) nil nil p2))
+                         (block-matrix l1-1 nil (bmm* (bt p2) l1-2) l2)
+                         (block-matrix e1 a3 nil e2))))))))))))
+
+(defun upper-trapezoidal-form (e)
+  "Returns $(P,F)$ such that $FP=E$ where $P$ is a permutation matrix, $F$ is upper trapezoidal
+   and the input $E$ is in upper trapezoidal form."
+  (destructuring-bind (m n) (array-dimensions e)
+    (let ((permutation-matrix (binary-zero-matrix n n)))
+      (loop for i from 0 below m do
+        (setf (aref permutation-matrix i (loop for j from 0 below n
+                                               when (not (zerop (aref e i j))) return j))
+              1))
+      (loop for i from m below n do
+        (setf (aref permutation-matrix i
+                    (loop for j from 0 below n
+                          when (loop for k from 0 below n
+                                     always (zerop (aref permutation-matrix k j)))
+                            return j))
+              1))
+      (let ((f (bmm* e (bt permutation-matrix))))
+        (values permutation-matrix f)))))
+
+(defun plfq-decomposition (a)
+  (bind (((:values p l e) (ple-decomposition a))
+         ((:values q f) (upper-trapezoidal-form e)))
+    (values p l f q (array-dimension e 0))))
+
+
+(defun transposition-permutation-matrix (i j m)
+  "Returns a $m \times m$ permutation matrix interchanging $i$ and $j$."
+  (let ((return-matrix (binary-zero-matrix m m)))
+    (loop for k from 0 below m do
+      (unless (or (= k i) (= k j))
+        (setf (aref return-matrix k k) 1)))
+    (setf (aref return-matrix i j) 1
+          (aref return-matrix j i) 1)
+    return-matrix))
+
+
+(defun ltrsm (a b)
+  "Finds $$X$$ such that $$AX=B$$. $A \in \mathbb F_2^{m \times m}$ is non-singular lower triangular,
+   $$B \in \mathbb F_2^{m \times n}$$."
+  (destructuring-bind (m n) (array-dimensions b)
+    (assert (= m (array-dimension a 0) (array-dimension a 1)))
+    (if (or (= n 0) (= m 0))
+        (binary-zero-matrix m n)
+          (if (= m 1)
+              (return-from ltrsm b)
+              (let ((split-point (floor (/ m 2))))
+                (multiple-value-bind (b1 b2) (split-rowwise b split-point)
+                  (multiple-value-bind (a-row1 a-row2) (split-rowwise a split-point)
+                    (multiple-value-bind (a1 empty-block) (split-columnwise a-row1 split-point)
+                      (multiple-value-bind (a2 a3) (split-columnwise a-row2 split-point)
+                        (let* ((x1 (ltrsm a1 b1))
+                               (x2 (ltrsm a3 (bmm+ b2 (bmm* a2 x1)))))
+                          (stack-matrices x1 x2)))))))))))
+
+
+(defun stack-matrices (x1 x2)
+  "Stacks the matrices on top of each other."
+  (destructuring-bind (m1 n1) (array-dimensions x1)
+    (destructuring-bind (m2 n2) (array-dimensions x2)
+      (assert (= n1 n2))
+      (let ((result (binary-zero-matrix (+ m1 m2) n1)))
+        (loop for i from 0 below m1 do
+          (loop for j from 0 below n1 do
+            (setf (aref result i j) (aref x1 i j))))
+        (loop for i from 0 below m2 do
+          (loop for j from 0 below n2 do
+            (setf (aref result (+ i m1) j) (aref x2 i j))))
+        result))))
