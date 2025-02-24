@@ -13,7 +13,30 @@
   `(let ((,name (make-array (list ,@dimensions) :element-type 'bit :initial-element 0)))
      ,@rest
      ,name))
+(defmacro with-block-decomposition (a b c d (matrix upper-block-width
+                                             &optional (upper-block-height upper-block-width))
+                                    &body body)
+  ;`(progn ,upper-block-width ,upper-block-height ,@body)
+  (assert (typep a 'symbol))
+  (assert (typep b 'symbol))
 
+  (assert (typep c 'symbol))
+  (assert (typep d 'symbol))
+  (let ((matrix-gensym (gensym "MATRIX"))
+        (width-gensym (gensym "WIDTH"))
+        (height-gensym (gensym "HEIGHT"))
+        (row-1 (gensym "ROW-1"))
+        (row-2 (gensym "ROW-2")))
+    `(let ((,matrix-gensym ,matrix)
+           (,width-gensym ,upper-block-width)
+           (,height-gensym ,upper-block-height))
+       (multiple-value-bind (,row-1 ,row-2)
+           (split-rowwise ,matrix-gensym ,height-gensym)
+         (multiple-value-bind (,(if a a (gensym "A")) ,(if b b (gensym "B")))
+             (split-columnwise ,row-1 ,width-gensym)
+           (multiple-value-bind (,(if c c (gensym "C")) ,(if d d (gensym "D")))
+               (split-columnwise ,row-2 ,width-gensym)
+             ,@body))))))
 ;;; Creating vectors and matrices
 
 (defun binary-zero-matrix (m n)
@@ -228,8 +251,45 @@
 (defun binary-vector-vector-sum (&rest vectors)
   (reduce #'two-arg-binary-vector-vector-sum vectors))
 
+(defun trmm (a b)
+  "Computes the product of an upper triangular matrix with another one."
+  (destructuring-bind (m n) (array-dimensions b)
+    (assert (= m (array-dimension a 0) (array-dimension a 1)))
+    (if (= m 1)
+        (if (zerop (aref a 0 0)) (apply #'binary-zero-matrix (array-dimensions b)) b)
+        (if (= m 0)
+            (binary-zero-matrix 0 n)
+            (let ((split-point (floor (/ m 2))))
+              (with-block-decomposition a1 a2 nil a3 (a split-point)
+                (multiple-value-bind (b1 b2) (split-rowwise b split-point)
+                  (let ((c1 (trmm a1 b1)))
+                    (setf c1 (bmm+ c1 (bmm* a2 b2)))
+                    (let ((c2 (trmm a3 b2)))
+                      (stack-matrices c1 c2))))))))))
+
+
+
+
+(defun trtri (a)
+  "Upper triangular matrix inversion"
+  (let ((n (array-dimension a 0)))
+    (if (<= n 1)
+        (bim n)
+        (let ((pivot (floor (/ n 2))))
+          (with-block-decomposition a1 a2 nil a3 (a pivot)
+            (let* ((c1 (trtri a1))
+                   (c3 (trtri a3))
+                   (c2 (bmm* a2 c3)))
+              (setf c2 (trmm c1 c2))
+              (block-matrix c1 c2 nil c3)))))))
+
+(defun ltrtri (a)
+  "Lower triangular matrix inversion" ; TODO Improve this implementation
+  (bt (trtri (bt a))))
+
 (defun invert-binary-matrix (matrix)
-  (error "not implemented yet"))
+  (bind (((:values p l f q) (plfq-decomposition matrix)))
+    (bmm* (bt q) (trtri f) (ltrtri l) (bt p))))
 
 ;;; Destructive operations (that alter the arguments)
 

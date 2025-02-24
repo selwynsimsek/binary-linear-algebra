@@ -17,6 +17,7 @@
 
 (defun gen-binary-vector (n) (lambda () (random-binary-vector n)))
 (defun gen-binary-matrix (n &optional (m n)) (lambda () (random-binary-matrix n m)))
+(defun gen-binary-invertible-matrix (n) (lambda () (random-binary-invertible-matrix n)))
 
 (test vector-sum-zero-p
     (for-all ((n (gen-integer :max 20 :min 0)))
@@ -57,3 +58,11 @@
         (is (binary-matrix-lower-triangular-unit-p l))
         (is (binary-matrix-upper-triangular-unit-p f))
         (is (bmm= a (bmm* p l f q)))))))
+
+(test inverse
+  (for-all ((n (gen-integer :max 10 :min 0)))
+    (for-all ((a (gen-binary-invertible-matrix n)))
+      (is (bmm= (binary-identity-matrix n)
+                (bmm* a (invert-binary-matrix a))))
+      (is (bmm= (binary-identity-matrix n)
+                (bmm* (invert-binary-matrix a) a))))))
