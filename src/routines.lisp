@@ -288,7 +288,7 @@
   (bt (trtri (bt a))))
 
 (defun invert-binary-matrix (matrix)
-  (bind (((:values p l f q) (plfq-decomposition matrix)))
+  (bind (((:values p l f q) (pluq-decomposition matrix)))
     (bmm* (bt q) (trtri f) (ltrtri l) (bt p))))
 
 ;;; Destructive operations (that alter the arguments)
@@ -481,7 +481,7 @@
       (let ((f (bmm* e (bt permutation-matrix))))
         (values permutation-matrix f)))))
 
-(defun plfq-decomposition (a)
+(defun pluq-decomposition (a)
   (bind (((:values p l e) (ple-decomposition a))
          ((:values q f) (upper-trapezoidal-form e)))
     (values p l f q (array-dimension e 0))))

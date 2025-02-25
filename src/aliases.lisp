@@ -49,7 +49,7 @@
 (function-alias binary-vector-as-column-vector bvcv)
 (function-alias binary-vector-as-row-vector bvrv)
 
-(function-alias plfq-decomposition plfq plfqr)
+(function-alias pluq-decomposition pluq pluqr)
 (function-alias invert-binary-matrix ibm)
 
 (function-alias binary-vector-p bv?)

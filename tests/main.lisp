@@ -48,11 +48,11 @@
       (is (bmm= (bmm* a (bmm* b c))
                 (bmm* (bmm* a b) c))))))
 
-(test plfq
+(test pluq
   (for-all ((n (gen-integer :max 10 :min 0))
             (m (gen-integer :max 10 :min 0)))
     (for-all ((a (gen-binary-matrix m n)))
-      (bind (((:values p l f q r) (plfqr a)))
+      (bind (((:values p l f q r) (pluqr a)))
         (is (binary-matrix-permutation-p p))
         (is (binary-matrix-permutation-p q))
         (is (binary-matrix-lower-triangular-unit-p l))
