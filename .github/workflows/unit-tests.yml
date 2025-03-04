@@ -48,4 +48,4 @@ jobs:
       with:
         version: 2.2.8
     - name: Run unit tests
-      run: sbcl --load ~/quicklisp/setup.lisp --eval "(push :continuous-integration *features*)" --eval "(asdf:test-system :binary-linear-algebra)" --non-interactive --quit
+      run: sbcl --load ~/quicklisp/setup.lisp --eval "(push :continuous-integration *features*)" --eval "(ql:quickload :binary-linear-algebra)" --eval "(asdf:test-system :binary-linear-algebra)" --non-interactive --quit
