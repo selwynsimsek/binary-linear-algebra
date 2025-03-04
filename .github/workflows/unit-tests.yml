@@ -48,4 +48,4 @@ jobs:
       with:
         version: 2.2.8
     - name: Run unit tests
-      run: git clone https://gitlab.com/zombie-raptor/zr-utils.git ~/quicklisp/local-projects/zr-utils && git clone https://github.com/hraban/metabang-bind.git ~/quicklisp/local-projects/metabang-bind && sbcl --eval "(push :continuous-integration *features*)" --eval "(asdf:test-system :binary-linear-algebra)" --non-interactive --quit
+      run: sbcl --eval "(push :continuous-integration *features*)" --eval "(asdf:test-system :binary-linear-algebra)" --non-interactive --quit
