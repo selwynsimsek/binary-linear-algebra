@@ -78,3 +78,6 @@
                 (bmm* a (invert-binary-matrix a))))
       (is (bmm= (binary-identity-matrix n)
                 (bmm* (invert-binary-matrix a) a))))))
+
+(test fake
+  (is nil))
