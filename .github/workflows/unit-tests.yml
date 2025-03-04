@@ -1,0 +1,49 @@
+
+# Caching code thanks to https://github.com/40ants/setup-lisp
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Get current month
+      id: current-month
+      run: |
+        echo "::set-output name=value::$(date -u "+%Y-%m")"
+    - name: Cache SBCL
+      id: cache
+      uses: actions/cache@v2
+      env:
+        cache-name: cache-sbcl
+      with:
+        path: |
+         ~/sbcl
+         ~/sbcl/lib/sbcl
+         ~/.sbclrc
+         ~/quicklisp
+         ~/.config/common-lisp
+        key: "${{ steps.current-month.outputs.value }}-${{ env.cache-name }}-${{ runner.os }}-v5"
+    - name: Restore path to cached files
+      run: |
+         echo "/home/runner/sbcl/bin" >> $GITHUB_PATH
+      if: steps.cache.outputs.cache-hit == 'true'
+    - uses: cheeze2000/setup-sbcl@v1
+      if: steps.cache.outputs.cache-hit != 'true'
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        version: 2.2.8
+    - name: Run unit tests
+      run: sbcl --eval "(push :continuous-integration *features*)" --eval "(asdf:test-system :binary-linear-algebra)" --non-interactive --quit
