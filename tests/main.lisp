@@ -11,7 +11,7 @@
 
 (in-suite binary-linear-algebra)
 
-(test test (is (= 3 (+ 1 1))))
+(test test (is (= 2 (+ 1 1))))
 
 ;;; Generators for random testing
 
