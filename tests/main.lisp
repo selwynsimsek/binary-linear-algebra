@@ -11,8 +11,6 @@
 
 (in-suite binary-linear-algebra)
 
-(test test (is (= 2 (+ 1 1))))
-
 ;;; Generators for random testing
 
 (defun gen-binary-vector (n) (lambda () (random-binary-vector n)))
@@ -48,6 +46,16 @@
       (is (bmm= (bmm* a (bmm* b c))
                 (bmm* (bmm* a b) c))))))
 
+(test multiplication-distributive-p
+ (for-all* ((m (gen-integer :max 10 :min 0))
+            (n (gen-integer :max 10 :min 0))
+            (k (gen-integer :max 10 :min 0))
+            (a (gen-binary-matrix m n))
+            (b (gen-binary-matrix n k))
+            (c (gen-binary-matrix n k)))
+   (is (bmm= (bmm+ (bmm* a b) (bmm* a c))
+             (bmm* a (bmm+ b c))))))
+
 (test pluq
   (for-all ((n (gen-integer :max 10 :min 0))
             (m (gen-integer :max 10 :min 0)))
@@ -66,6 +74,3 @@
                 (bmm* a (invert-binary-matrix a))))
       (is (bmm= (binary-identity-matrix n)
                 (bmm* (invert-binary-matrix a) a))))))
-
-
-(test test-2 (is (= 4 (+ 2 2))))
