@@ -34,7 +34,7 @@ jobs:
          ~/.sbclrc
          ~/quicklisp
          ~/.config/common-lisp
-        key: "${{ steps.current-month.outputs.value }}-${{ env.cache-name }}-${{ runner.os }}-v7"
+        key: "${{ steps.current-month.outputs.value }}-${{ env.cache-name }}-${{ runner.os }}-v8"
     - name: Restore path to cached files
       run: |
          echo "/home/runner/sbcl/bin" >> $GITHUB_PATH
@@ -48,4 +48,4 @@ jobs:
       with:
         version: 2.2.8
     - name: Run unit tests
-      run: sbcl --load ~/quicklisp/setup.lisp --eval "(push :continuous-integration *features*)" --eval "(ql:quickload :binary-linear-algebra)" --eval "(asdf:test-system :binary-linear-algebra)" --non-interactive --quit
+      run: sbcl --load ~/quicklisp/setup.lisp --eval "(push :continuous-integration *features*)" --eval "(ql:quickload :binary-linear-algebra/tests)" --eval "(asdf:test-system :binary-linear-algebra)" --non-interactive --quit
