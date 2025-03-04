@@ -6,6 +6,10 @@
   (:shadowing-import-from #:metabang-bind #:bind))
 (in-package :com.selwynsimsek.binary-linear-algebra/tests)
 
+
+#+continuous-integration
+(setf fiveam:*debug-on-error* t fiveam:*debug-on-failure* t)
+
 (def-suite binary-linear-algebra
   :description "Test all of binary-linear-algebra")
 
