@@ -1,5 +1,6 @@
 * binary-linear-algebra - Linear algebra over 𝔽₂ in Common Lisp
-
+#+CAPTION: CI
+[[https://github.com/selwynsimsek/binary-linear-algebra/actions/workflows/unit-tests.yml][https://github.com/selwynsimsek/binary-linear-algebra/actions/workflows/unit-tests.yml/badge.svg]]
 ** Usage
 
 ** Installation
