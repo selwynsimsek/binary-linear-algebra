@@ -14,6 +14,7 @@
 (function-alias binary-ones-matrix b1m)
 (function-alias binary-scalar-vector bsv)
 (function-alias binary-scalar-matrix bsm)
+(function-alias binary-symplectic-matrix bsym)
 
 (function-alias binary-zero-vector b0v)
 (function-alias binary-ones-vector b1v)
@@ -22,8 +23,8 @@
 (function-alias binary-matrix-matrix-equal-p bmm=)
 (function-alias binary-vector-vector-equal-p bvv=)
 (function-alias mod2 m2)
-(function-alias binary-vector-inner-product bv.)
-(function-alias binary-vector-symplectic-inner-product bsv.)
+(function-alias binary-vector-inner-product bv. bvv.)
+(function-alias binary-vector-symplectic-inner-product bsv. bsvv.)
 (function-alias popcount popcnt)
 (function-alias binary-vector-outer-product bvo)
 

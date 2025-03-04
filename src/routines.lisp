@@ -44,6 +44,13 @@
               :element-type 'bit
               :initial-element 0))
 
+(defun binary-symplectic-matrix (n)
+  (let ((return-array (binary-zero-matrix (* 2 n) (* 2 n))))
+    (loop for i from 0 below n do
+      (setf (aref return-array (+ i n) i) 1
+            (aref return-array i (+ i n)) 1))
+    return-array))
+
 (defun binary-ones-matrix (m n)
   (make-array (list m n)
               :element-type 'bit
@@ -166,10 +173,9 @@
   (assert (= (length v1) (length v2)))
   (mod2 (loop for i from 0 below (length v1) summing (* (aref v1 i) (aref v2 i)))))
 
-(defun binary-vector-symplectic-inner-product (v1 v2)
-  (let ((n (binary-symplectic-vector-size v1)))
-    (mod2 (loop for i from 0 below n summing (+ (* (aref v1 i) (aref v2 (+ i n)))
-                                                (* (aref v1 (+ i n)) (aref v2 i)))))))
+(defun binary-vector-symplectic-inner-product (v1 v2 &optional (n (binary-symplectic-vector-size v1)))
+  (mod2 (loop for i from 0 below n summing (+ (* (aref v1 i) (aref v2 (+ i n)))
+                                              (* (aref v1 (+ i n)) (aref v2 i))))))
 
 (defun popcount (v)
   (declare (type bit-vector v))
