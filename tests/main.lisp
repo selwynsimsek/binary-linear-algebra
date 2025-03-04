@@ -66,3 +66,6 @@
                 (bmm* a (invert-binary-matrix a))))
       (is (bmm= (binary-identity-matrix n)
                 (bmm* (invert-binary-matrix a) a))))))
+
+
+(test test-2 (is (= 4 (+ 2 2))))
