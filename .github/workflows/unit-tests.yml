@@ -34,7 +34,7 @@ jobs:
          ~/.sbclrc
          ~/quicklisp
          ~/.config/common-lisp
-        key: "${{ steps.current-month.outputs.value }}-${{ env.cache-name }}-${{ runner.os }}-b"
+        key: "${{ steps.current-month.outputs.value }}-${{ env.cache-name }}-${{ runner.os }}-binary-linear-algebra-v1"
     - name: Restore path to cached files
       run: |
          echo "/home/runner/sbcl/bin" >> $GITHUB_PATH
