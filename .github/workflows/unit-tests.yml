@@ -42,8 +42,9 @@ jobs:
     - uses: cheeze2000/setup-sbcl@v1
       if: steps.cache.outputs.cache-hit != 'true'
     - name: Grabs dependencies
-      run: git clone https://gitlab.com/zombie-raptor/zr-utils.git ~/quicklisp/local-projects/zr-utils
-      run: git clone https://github.com/hraban/metabang-bind.git ~/quicklisp/local-projects/metabang-bind
+      run: |
+        git clone https://gitlab.com/zombie-raptor/zr-utils.git ~/quicklisp/local-projects/zr-utils
+        git clone https://github.com/hraban/metabang-bind.git ~/quicklisp/local-projects/metabang-bind
       if: steps.cache.outputs.cache-hit != 'true'
     - name: Checkout
       uses: actions/checkout@v3
