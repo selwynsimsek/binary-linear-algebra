@@ -195,7 +195,7 @@
 (defun binary-transpose (matrix)
   "Returns the bt of a binary matrix."
   (destructuring-bind (m n) (array-dimensions matrix)
-    (let ((result (binary-zero-matrix m n)))
+    (let ((result (binary-zero-matrix n m)))
       (loop for i from 0 below m
             do (loop for j from 0 below n
                      do (setf (aref result j i) (aref matrix i j))))
@@ -287,7 +287,10 @@
                    (c3 (trtri a3))
                    (c2 (bmm* a2 c3)))
               (setf c2 (trmm c1 c2))
-              (block-matrix c1 c2 nil c3)))))))
+              (let ((inv
+                      (block-matrix c1 c2 nil c3)))
+                (assert (bmm= (bmm* inv a) (bim n)))
+                inv)))))))
 
 (defun ltrtri (a)
   "Lower triangular matrix inversion" ; TODO Improve this implementation
@@ -468,6 +471,40 @@
                          (block-matrix l1-1 nil (bmm* (bt p2) l1-2) l2)
                          (block-matrix e1 a3 nil e2))))))))))))
 
+(defun solve-lower-triangular-matrix (l b )
+  "Solves the trapezoidal matrix system of equations $$LX=B$$ where $$L$$ is a lower trapezoidal matrix.
+   $$L$$ must have a unit diagonal.
+   Returns the solution $$X$$ if it exists, NIL otherwise."
+  (destructuring-bind (m r) (array-dimensions l)
+    (multiple-value-bind (l1 w) (split-rowwise l r)
+      (multiple-value-bind (b1 b2) (split-rowwise b r)
+        (let ((h (ltrsm l1 b1)))
+          (when (bmm= (bmm* w h) b2)
+            h))))))
+
+(defun solve-upper-trapezoidal-matrix-system (u b)
+  "Solves the trapezoidal system of equations $$UX=B$$, where $$U$$ is an upper trapezoidal matrix.
+   $$U$$ must have a unit diagonal.
+   Returns a solution $$X$$ (which may not be unique)."
+  (destructuring-bind (r n) (array-dimensions u)
+    (multiple-value-bind (u1 y) (split-columnwise u r)
+      (let ((j1 (trsm u1 b)))
+        (stack-matrices j1 (b0m (- n r) (array-dimension b 1)))))))
+
+(defun solve-matrix-system (a b)
+  "Solves the matrix system of equations $AX=B$ using PLE decomposition.
+   The matrices $$A$$ and $$B$$ must have the same number of rows.
+   Returns the matrix $$X$$ if it exists, NIL otherwise."
+  (assert (= (array-dimension a 0) (array-dimension b 0)))
+  (multiple-value-bind (p l e) (ple-decomposition a)
+    (multiple-value-bind (q f) (upper-trapezoidal-form e)
+      (let* ((g (bmm* (bt p) b)))
+        (alexandria:when-let ((h (solve-lower-triangular-matrix l g)))
+          (let ((j (solve-upper-trapezoidal-matrix-system f h)))
+            (let ((x (bmm* (bt q) j)))
+              (when x (assert (bmm= b (bmm* a x))))
+              x))))))) ;; unit tests for this
+
 (defun upper-trapezoidal-form (e)
   "Returns $(P,F)$ such that $FP=E$ where $P$ is a permutation matrix, $F$ is upper trapezoidal
    and the input $E$ is in upper trapezoidal form."
@@ -536,3 +573,178 @@
           (loop for j from 0 below n2 do
             (setf (aref result (+ i m1) j) (aref x2 i j))))
         result))))
+
+(defun binary-scalar-vector-product (scalar vector)
+  (if (zerop scalar)
+      (b0v (length vector))
+      (copy-seq vector)))
+
+(defun null-space (a)
+  "Returns a matrix $X$ of maximal rank such that $$AX=0$$,
+   i.e. the columns of $X$ form a basis for the null space."
+  (multiple-value-bind (p l e) (ple-decomposition a)
+    (declare (ignore p l))
+    (row-echelon-null-space e))) ; add unit tests
+
+
+(defun row-echelon-null-space (e)
+  (multiple-value-bind (q f) (upper-trapezoidal-form e)
+    (bmm* (bt q) (upper-trapezoidal-null-space f))))
+
+(defun upper-trapezoidal-null-space (a)
+  "Returns a matrix the columns of which are the null vectors of $$A$$.
+   $A$ must be upper trapezoidal."
+  (destructuring-bind (r n) (array-dimensions a)
+    (multiple-value-bind (l q) (split-columnwise a r)
+      (let ((null-space (stack-matrices (trsm l q) (bim (- n r)))))
+        (assert (bmm= (b0m r (- n r)) (bmm* a null-space)))
+        null-space))))
+
+(defun upper-left-matrix (matrix width height)
+  (let ((result (b0m height width)))
+    (loop for i below height do
+      (loop for j below width do
+        (setf (aref result i j) (aref matrix i j))))
+    result))
+
+(defun trsm (a b)
+  "Finds $X$ such that $$AX=B$$. $A \in \mathbb F_2^{m \times m}$ is non-singular upper triangular,
+   $$B \in \mathbb F_2^{m \times n}$$."
+  (destructuring-bind (m n) (array-dimensions b)
+    (assert (= m (array-dimension a 0) (array-dimension a 1)))
+    (if (or (= n 0) (= m 0))
+        (b0m m n)
+        (if (= m 1)
+            (return-from trsm b)        ; step 1
+            (let ((split-point (floor (/ m 2))))
+              (multiple-value-bind (b1 b2) (split-rowwise b split-point)
+                (multiple-value-bind (a-row1 a-row2) (split-rowwise a split-point)
+                  (multiple-value-bind (a1 a2) (split-columnwise a-row1 split-point)
+                    (multiple-value-bind (empty-block a3) (split-columnwise a-row2 split-point)
+                      (let* ((x2 (trsm a3 b2))           ; step 2
+                             (b1 (bmm+ b1 (bmm* a2 x2))) ; step 3
+                             (x1 (trsm a1 b1)))          ; step 4
+                        (let ((result
+                                (stack-matrices x1 x2)))
+                          (assert (bmm= b (bmm* a result)))
+                          result))))))))))) ; step 5
+
+(defun row-echelon-form (a)
+  "Returns (values x e) such that x a = e, x non singular and e in row echelon form."
+  (bind (((m n) (array-dimensions a))
+         ((:values p l e) (ple-decomposition a))
+         (r (array-dimension a 0))
+         ((:values l1 l2) (split-rowwise l r))
+         (x1 (ltrtri l1))
+         (x2 (bmm* l2 x1))
+         (x (bmm* (block-matrix x1 nil x2 (bim (- m r))) (bt p))))
+    (assert (row-echelon-p e))
+    (assert (bmm= e (bmm* x a)))
+    (values x e)))
+
+(defun reduced-row-echelon-form (a)
+  "Returns (values r y) such that y a = r, y non singular and r is in reduced row echelon form."
+  (bind (((m n) (array-dimensions a))
+         ((:values p l e) (ple-decomposition a))
+         ((:values x e) (row-echelon-form a))
+         ((:values q f) (upper-trapezoidal-form e))
+         (r (array-dimension e 0))
+         ((:values u1 u2) (split-columnwise (bmm* e q) r))
+         ((:values x1 x2) (split-columnwise x r))
+         (y1 (trtri u1))
+         (y1 (bmm* y1 x1))
+         (rm (bmm* (bt (stack-hor (bim r) (bt (bmm* (ibm u1) u2)))) (bt q)))
+         (y (bmm* (block-matrix y1 nil u2 (bim (- n r))) (bt p))))
+    (assert (bmm= (bmm* y a) rm))
+    (values rm y))
+  )
+
+(defun row-echelon-p (a)
+  "Returns T if and only if $$A$$ is in row echelon form."
+  (let ((current-leading-coefficient-index -1))
+    (destructuring-bind (m n) (array-dimensions a)
+      (loop for index from 0 below m do
+        (let ((current-row-leading-coefficient
+                (loop for j from 0 below n
+                      when (not (zerop (aref a index j))) ; leading non-zero coefficient found
+                        return j)))
+          (if current-row-leading-coefficient
+              (when (<= current-row-leading-coefficient current-leading-coefficient-index)
+                ;; leading coefficient not strictly to the right of the one above
+                (return-from row-echelon-p nil))
+              ;; else the row was all zeroes. we need all other rows below this one to be zero
+              (return-from row-echelon-p
+                (loop for k from (+ 1 index) below m always
+                      (loop for l from 0 below n always (zerop (aref a k l))))))
+          (setf current-leading-coefficient-index current-row-leading-coefficient)))
+      t)))
+
+(defun reduced-row-echelon-p (e)
+  "Returns T if and only if $$A$$ is in reduced row echelon form."
+  (and (row-echelon-p e)
+       (destructuring-bind (m n) (array-dimensions e)
+         (loop for index from 0 below m
+               always
+               (let ((leading-j (loop for j from 0 below n
+                                      when (not (zerop (aref e index j)))
+                                        return j)))
+                 (if leading-j
+                     (loop for i from 0 below m always
+                                                (or (= i index) (zerop (aref e i leading-j))))
+                     t))))))
+
+(defun stack-horizontally (a1 a2)
+  (destructuring-bind (m1 n1) (array-dimensions a1)
+    (destructuring-bind (m2 n2) (array-dimensions a2)
+      (assert (= m1 m2))
+      (let ((return-matrix (b0m m1 (+ n1 n2))))
+        (loop for i from 0 below m1
+              do (loop for j from 0 below n1
+                       do (setf (aref return-matrix i j) (aref a1 i j))))
+        (loop for i from 0 below m2
+              do (loop for j from 0 below n2
+                       do (setf (aref return-matrix i (+ j n1)) (aref a2 i j))))
+        return-matrix))))
+
+(defun %reduced-row-echelon-form (a)
+  "Returns $$(Y,R)$$ such that $$YA=R$$, $$Y$$ is non-singular and $$R$$ is in reduced row-echelon form."
+  (destructuring-bind (m n) (array-dimensions a)
+    (multiple-value-bind (p l e) (ple-decomposition a)
+      (multiple-value-bind (q f) (upper-trapezoidal-form e)
+        (let ((r (array-dimension e 0)))
+          (with-block-decomposition u1 u2 nil nil (f r r)
+            (print u1)
+            (print u2)
+            (let* ((y1 (trtri u1))
+                   (r1 (stack-horizontally (bim r) (trmm y1 u2)))
+                   (r1q (stack-matrices (bmm* r1 q) (b0m (- m r) n)))
+                   (y1 (stack-matrices y1 (b0m (- m r) r))))
+              (let ((a (bt l))
+                    (c (bt y1)))
+                (with-block-decomposition a1 a2 nil nil (a r r)
+                  (with-block-decomposition c1 c2 nil nil (c r r)
+                    (let* ((b22 (bim (- m r)))
+                           (b12 (bmm* a1 (bmm+ c2 a2)))
+                           (b11 (bmm* a1 c1))
+                           (b (block-matrix b11 b12 nil b22))
+                           (y2 (bt b)))
+                      (let ((y (bt (solve-matrix-system (bt a) (bt r1q)))))
+                        (assert (bmm= (bmm* y a) r1q))
+                        (assert (reduced-row-echelon-p r1q))
+                        (values y r1q r)))))))))))))
+
+(defun reduced-row-echelon-form (a)
+  "Returns (values r y) such that ya = r, y is non-singular and r is in reduced row-echelon form."
+  (bind (((m n) (array-dimensions a))
+         ((:values p l u q r) (pluq-decomposition a))
+         ((:values u1 u2) (split-columnwise u r))
+         ((:values l1 l2) (split-rowwise l r))
+         (u-block (stack-horizontally (bim r) (bmm* (ibm u1) u2)))
+         (rm (trsm u1 (bmm* u q)))
+         (y (bmm* (block-matrix (bmm* (ibm u1) (ibm l1)) nil u2 (bim (- m r))) (bt p))))
+    (print q)
+    (assert (binary-matrix-upper-triangular-unit-p u1))
+    (assert (reduced-row-echelon-p rm))
+    (ibm y) ; way of asserting that y is invertible
+    (assert (bmm= rm (bmm* y a) ))
+    (values rm y)))

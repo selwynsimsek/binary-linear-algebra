@@ -44,6 +44,7 @@
 
 (function-alias binary-matrix-matrix-product bmm*)
 (function-alias binary-matrix-vector-product bmv*)
+(function-alias binary-scalar-vector-product bsv*)
 (function-alias binary-matrix-matrix-sum bmm+)
 (function-alias binary-vector-vector-sum bvv+)
 
@@ -61,3 +62,10 @@
 (function-alias binary-matrix-upper-triangular-p bmut?)
 (function-alias binary-matrix-lower-triangular-unit-p bmltu?)
 (function-alias binary-matrix-upper-triangular-unit-p bmutu?)
+
+(function-alias null-space)
+(function-alias row-echelon-null-space)
+(function-alias upper-trapezoidal-null-space)
+(function-alias trsm)
+(function-alias upper-left-matrix ulm)
+(function-alias solve-matrix-system)
