@@ -69,3 +69,6 @@
 (function-alias trsm)
 (function-alias upper-left-matrix ulm)
 (function-alias solve-matrix-system)
+
+(function-alias row-echelon-form ref)
+(function-alias reduced-row-echelon-form rref)
