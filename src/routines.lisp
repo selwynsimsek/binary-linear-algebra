@@ -683,7 +683,13 @@
         return-matrix))))
 
 (defun row-echelon-form (a)
-  "Returns (values e x) such that x a = e, x invertible, and e row echelon form.")
+  "Returns (values e x) such that x a = e, x invertible, and e row echelon form."
+  (bind (((:values p l e) (ple-decomposition a))
+         ((m n) (array-dimensions a))
+         (r (array-dimension e 0))
+         ((:values l1 l2) (split-rowwise l r))
+         (x (bmm* (block-matrix (ibm l1) nil (bmm* l2 (ibm l1)) (bim (- m r))) (bt p))))
+    (values (stack-matrices e (b0m (- m r) n)) x)))
 
 (defun reduced-row-echelon-form (a)
   "Returns (values y r) such that y a = r, y invertible, and r is in reduced row echelon form.")
