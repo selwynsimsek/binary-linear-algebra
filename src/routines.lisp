@@ -508,7 +508,6 @@
         (alexandria:when-let ((h (solve-lower-triangular-matrix l g)))
           (let ((j (solve-upper-trapezoidal-matrix-system f h)))
             (let ((x (bmm* (bt q) j)))
-              (when x (assert (bmm= b (bmm* a x))))
               x))))))) ;; unit tests for this
 
 (defun upper-trapezoidal-form (e)
@@ -636,19 +635,6 @@
                           (assert (bmm= b (bmm* a result)))
                           result))))))))))) ; step 5
 
-(defun row-echelon-form (a)
-  "Returns (values x e) such that x a = e, x non singular and e in row echelon form."
-  (bind (((m n) (array-dimensions a))
-         ((:values p l e) (ple-decomposition a))
-         (r (array-dimension e 0))
-         ((:values l1 l2) (split-rowwise l r))
-         (x (bmm* (block-matrix (ibm l1) nil (bmm* l2 (ibm l1)) (bim (- m r))) (bt p))))
-    (print (bmm* x p l))
-    (assert (row-echelon-p e))
-    (ibm x)
-    (assert (bmm= e (bmm* x a)))
-    (values x e)))
-
 (defun row-echelon-p (a)
   "Returns T if and only if $$A$$ is in row echelon form."
   (let ((current-leading-coefficient-index -1))
@@ -695,19 +681,6 @@
               do (loop for j from 0 below n2
                        do (setf (aref return-matrix i (+ j n1)) (aref a2 i j))))
         return-matrix))))
-
-(defun reduced-row-echelon-form (a)
-  (bind (((m n) (array-dimensions a))
-         ((:values p l u q r) (pluq-decomposition a))
-         ((:values u1 u2) (split-columnwise u r))
-         (rm (trsm u1 (bmm* u q)))
-                                        ; TODO implement this function without solve-matrix-system
-         (r-extended (stack-matrices rm (b0m (- m r) n)))
-         (y (bt (solve-matrix-system (bt a) (bt r-extended)))))
-    (assert (bmm= r-extended (bmm* y a)))
-    ;(ibm y)
-    (assert (reduced-row-echelon-p r-extended))
-    (values r-extended y)))
 
 (defun row-echelon-form (a)
   "Returns (values e x) such that x a = e, x invertible, and e row echelon form.")

@@ -94,3 +94,14 @@
                  (a (gen-binary-invertible-upper-triangular-unit-matrix m))
                  (b (gen-binary-matrix m n)))
         (is (bmm= b (bmm* a (trsm a b))))))
+
+(test solve-matrix-system
+  (for-all* ((n (gen-integer :max 10 :min 0))
+             (m (gen-integer :max 10 :min 0))
+             (k (gen-integer :max 10 :min 0))
+             (a (gen-binary-matrix n m))
+             (b (gen-binary-matrix n k)))
+    (let ((x (solve-matrix-system a b)))
+      (is (if x
+              (bmm= b (bmm* a x))
+              t)))))
