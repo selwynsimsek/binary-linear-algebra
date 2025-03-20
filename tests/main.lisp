@@ -105,3 +105,21 @@
       (is (if x
               (bmm= b (bmm* a x))
               t)))))
+
+(test row-echelon-form
+  (for-all* ((n (gen-integer :max 10 :min 0))
+             (m (gen-integer :max 10 :min 0))
+             (a (gen-binary-matrix n m)))
+    (bind (((:values e x) (row-echelon-form a)))
+      (is (bmm= e (bmm* x a)))
+      (is (binary-matrix-invertible-p x))
+      (is (row-echelon-p e)))))
+
+(test reduced-row-echelon-form
+  (for-all* ((n (gen-integer :max 10 :min 0))
+             (m (gen-integer :max 10 :min 0))
+             (a (gen-binary-matrix n m)))
+    (bind (((:values y r) (reduced-row-echelon-form a)))
+      (is (bmm= r (bmm* y a)))
+      (is (binary-matrix-invertible-p y))
+      (is (reduced-row-echelon-p r)))))
