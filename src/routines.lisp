@@ -695,20 +695,15 @@
 (defun reduced-row-echelon-form (a)
   "Returns (values r y) such that y a = r, y invertible, and r is in reduced row echelon form."
   (bind (((:values p l u q r) (pluq-decomposition a))
-         ((m n) (array-dimensions a)))
-    (with-block-decomposition u1 u2 nil nil (u r)
-      (with-block-decomposition l1 nil l2 nil (l r)
-        (assert (binary-matrix-upper-triangular-unit-p u1))
-        (assert (binary-matrix-lower-triangular-unit-p l1))
-        (assert (binary-matrix-square-p l1))
-        (assert (binary-matrix-square-p u1))
-        (bind ((r1 (trsm u1 (bmm* u q))) ; u1 r1 = u q by construction
-               (r-matrix (stack-matrices r1 (b0m (- m r) n)))
-               (l1-inv (ltrtri l1))
-               (y (bmm* (block-matrix (bmm* (trtri u1) l1-inv)
-                                      nil
-                                      (bmm* l2 l1-inv)
-                                      (bim (- m r)))
-                        (bt p))))
-          (values r-matrix y)
-          )))))
+         ((m n) (array-dimensions a))
+         ((:values l1 l2) (split-rowwise l r))
+         ((:values u1 u2) (split-columnwise u r))
+         (r1 (trsm u1 (bmm* u q))) ; u1 r1 = u q by construction
+         (r-matrix (stack-matrices r1 (b0m (- m r) n)))
+         (l1-inv (ltrtri l1))
+         (y (bmm* (block-matrix (bmm* (trtri u1) l1-inv)
+                                nil
+                                (bmm* l2 l1-inv)
+                                (bim (- m r)))
+                  (bt p))))
+    (values r-matrix y)))
