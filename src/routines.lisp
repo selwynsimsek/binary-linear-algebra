@@ -300,6 +300,12 @@
   (bind (((:values p l f q) (pluq-decomposition matrix)))
     (bmm* (bt q) (trtri f) (ltrtri l) (bt p))))
 
+
+(defun binary-matrix-invertible-p (m)
+  (bind (((:values _ _ _ _ r) (pluq-decomposition m)))
+    (= r (array-dimension m 0) (array-dimension m 1))))
+
+
 ;;; Destructive operations (that alter the arguments)
 
 ;;; Random routines
@@ -634,9 +640,12 @@
   "Returns (values x e) such that x a = e, x non singular and e in row echelon form."
   (bind (((m n) (array-dimensions a))
          ((:values p l e) (ple-decomposition a))
-         (r (array-dimension a 0))
-         (x (bt (solve-matrix-system (bt a) (bt e))))) ; TODO bit inefficient; improve this
+         (r (array-dimension e 0))
+         ((:values l1 l2) (split-rowwise l r))
+         (x (bmm* (block-matrix (ibm l1) nil (bmm* l2 (ibm l1)) (bim (- m r))) (bt p))))
+    (print (bmm* x p l))
     (assert (row-echelon-p e))
+    (ibm x)
     (assert (bmm= e (bmm* x a)))
     (values x e)))
 
@@ -688,10 +697,20 @@
         return-matrix))))
 
 (defun reduced-row-echelon-form (a)
-  (bind (((:values p l u q r) (pluq-decomposition a))
+  (bind (((m n) (array-dimensions a))
+         ((:values p l u q r) (pluq-decomposition a))
          ((:values u1 u2) (split-columnwise u r))
-         (rm (trsm u1 (bmm* u q))) ; TODO implement this function without solve-matrix-system
-         (y (bt (solve-matrix-system (bt a) (bt rm)))))
-    (assert (bmm= rm (bmm* y a)))
-    (assert (reduced-row-echelon-p rm))
-    (values rm y)))
+         (rm (trsm u1 (bmm* u q)))
+                                        ; TODO implement this function without solve-matrix-system
+         (r-extended (stack-matrices rm (b0m (- m r) n)))
+         (y (bt (solve-matrix-system (bt a) (bt r-extended)))))
+    (assert (bmm= r-extended (bmm* y a)))
+    ;(ibm y)
+    (assert (reduced-row-echelon-p r-extended))
+    (values r-extended y)))
+
+(defun row-echelon-form (a)
+  "Returns (values e x) such that x a = e, x invertible, and e row echelon form.")
+
+(defun reduced-row-echelon-form (a)
+  "Returns (values y r) such that y a = r, y invertible, and r is in reduced row echelon form.")

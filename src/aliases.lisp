@@ -62,6 +62,7 @@
 (function-alias binary-matrix-upper-triangular-p bmut?)
 (function-alias binary-matrix-lower-triangular-unit-p bmltu?)
 (function-alias binary-matrix-upper-triangular-unit-p bmutu?)
+(function-alias binary-matrix-invertible-p bmi?)
 
 (function-alias null-space)
 (function-alias row-echelon-null-space)
@@ -69,6 +70,9 @@
 (function-alias trsm)
 (function-alias upper-left-matrix ulm)
 (function-alias solve-matrix-system)
+
+(function-alias row-echelon-p re? rep)
+(function-alias reduced-row-echelon-p rre? rrep)
 
 (function-alias row-echelon-form ref)
 (function-alias reduced-row-echelon-form rref)
