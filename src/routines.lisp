@@ -702,8 +702,13 @@
         (assert (binary-matrix-lower-triangular-unit-p l1))
         (assert (binary-matrix-square-p l1))
         (assert (binary-matrix-square-p u1))
-        (bind ((r-matrix (stack-matrices (trsm u1 (bmm* u q)) (b0m (- m r) n)))
-               ;(y (bmm* (block-matrix (bmm* (ibm u1) (ibm l1)) (b0m r (- n r)) (bt u2) (bim (- n r))) (bt p)))
-               )
-          (values r-matrix)
+        (bind ((r1 (trsm u1 (bmm* u q))) ; u1 r1 = u q by construction
+               (r-matrix (stack-matrices r1 (b0m (- m r) n)))
+               (l1-inv (ltrtri l1))
+               (y (bmm* (block-matrix (bmm* (trtri u1) l1-inv)
+                                      nil
+                                      (bmm* l2 l1-inv)
+                                      (bim (- m r)))
+                        (bt p))))
+          (values r-matrix y)
           )))))
