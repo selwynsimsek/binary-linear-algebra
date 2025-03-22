@@ -683,27 +683,27 @@
         return-matrix))))
 
 (defun row-echelon-form (a)
-  "Returns (values e x) such that x a = e, x invertible, and e row echelon form."
+  "Returns (values e x r) such that x a = e, x invertible, e row echelon form, and e has r non-zero rows."
   (bind (((:values p l e) (ple-decomposition a))
          ((m n) (array-dimensions a))
          (r (array-dimension e 0))
          ((:values l1 l2) (split-rowwise l r))
          (l1-inv (ltrtri l1))
          (x (bmm* (block-matrix l1-inv nil (bmm* l2 l1-inv) (bim (- m r))) (bt p))))
-    (values (stack-matrices e (b0m (- m r) n)) x)))
+    (values (stack-matrices e (b0m (- m r) n)) x r)))
 
 (defun reduced-row-echelon-form (a)
-  "Returns (values r y) such that y a = r, y invertible, and r is in reduced row echelon form."
+  "Returns (values s y r) such that s a = r, s invertible, r is in reduced row echelon form, and s has r non-zero rows."
   (bind (((:values p l u q r) (pluq-decomposition a))
          ((m n) (array-dimensions a))
          ((:values l1 l2) (split-rowwise l r))
          ((:values u1 u2) (split-columnwise u r))
          (r1 (trsm u1 (bmm* u q))) ; u1 r1 = u q by construction
-         (r-matrix (stack-matrices r1 (b0m (- m r) n)))
+         (s (stack-matrices r1 (b0m (- m r) n)))
          (l1-inv (ltrtri l1))
          (y (bmm* (block-matrix (bmm* (trtri u1) l1-inv)
                                 nil
                                 (bmm* l2 l1-inv)
                                 (bim (- m r)))
                   (bt p))))
-    (values r-matrix y)))
+    (values s y r)))
