@@ -127,8 +127,10 @@
   (and (binary-matrix-square-p m)
        (bind ((n (array-dimension m 0)))
          (loop for i from 0 below n always
-                                    (and (= 1 (loop for j from 0 below n counting (not (zerop (aref m i j)))))
-                                         (= 1 (loop for j from 0 below n counting (not (zerop (aref m j i))))))))))
+                                    (and (= 1 (loop for j from 0 below n
+                                                    counting (not (zerop (aref m i j)))))
+                                         (= 1 (loop for j from 0 below n
+                                                    counting (not (zerop (aref m j i))))))))))
 
 (defun binary-matrix-lower-triangular-p (a)
   (and (binary-matrix-p a)
@@ -302,8 +304,8 @@
 
 
 (defun binary-matrix-invertible-p (m)
-  (bind (((:values _ _ _ _ r) (pluq-decomposition m)))
-    (= r (array-dimension m 0) (array-dimension m 1))))
+  (bind (((:values _ _ e) (ple-decomposition m)))
+    (= (array-dimension e 0) (array-dimension m 0) (array-dimension m 1))))
 
 
 ;;; Destructive operations (that alter the arguments)
@@ -693,7 +695,7 @@
     (values (stack-matrices e (b0m (- m r) n)) x r)))
 
 (defun reduced-row-echelon-form (a)
-  "Returns (values s y r) such that s a = r, s invertible, r is in reduced row echelon form, and s has r non-zero rows."
+  "Returns (values s y r) such that y s = r, y invertible, s is in reduced row echelon form, and s has r non-zero rows."
   (bind (((:values p l u q r) (pluq-decomposition a))
          ((m n) (array-dimensions a))
          ((:values l1 l2) (split-rowwise l r))
