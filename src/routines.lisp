@@ -220,16 +220,26 @@
         for i from 0 below n do (setf (aref vector i) i) finally (return vector)))
 
 
-(defun two-arg-binary-matrix-matrix-product (matrix-1 matrix-2)
+(deftype bit-matrix () '(array bit (* *)))
+(deftype simple-bit-matrix () '(simple-array bit (* *)))
+
+(deftype bit-matrix-only () '(values (array bit (* *)) &optional))
+(deftype simple-bit-matrix-only () '(values (simple-array bit (* *)) &optional))
+(deftype bit-vector-only () '(values bit-vector &optional))
+(deftype simple-bit-vector-only () '(values simple-bit-vector &optional))
+
+(define-function (two-arg-binary-matrix-matrix-product :inline t :return simple-bit-matrix)
+    ((matrix-1 bit-matrix) (matrix-2 bit-matrix))
+  (declare (optimize (speed 3) (safety 0)))
   (bind (((m k) (array-dimensions matrix-1))
          ((k2 n) (array-dimensions matrix-2)))
     (assert (= k k2))
     (with-return-binary-array product (m n)
       (loop for i from 0 below m do
-            (loop for j from 0 below n do
-                  (setf (aref product i j) (mod2 (loop for s from 0 below k summing
-                                                                            (* (aref matrix-1 i s)
-                                                                               (aref matrix-2 s j))))))))))
+        (loop for j from 0 below n do
+          (setf (aref product i j) (mod2 (loop for s from 0 below k summing
+                                                                    (* (aref matrix-1 i s)
+                                                                       (aref matrix-2 s j))))))))))
 
 (defun binary-matrix-matrix-product (&rest matrices)
   (reduce #'two-arg-binary-matrix-matrix-product matrices))
