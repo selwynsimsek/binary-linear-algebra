@@ -63,6 +63,7 @@
 (function-alias binary-matrix-lower-triangular-unit-p bmltu?)
 (function-alias binary-matrix-upper-triangular-unit-p bmutu?)
 (function-alias binary-matrix-invertible-p bmi?)
+(function-alias binary-matrix-symplectic-p bmsym?)
 
 (function-alias null-space)
 (function-alias row-echelon-null-space)

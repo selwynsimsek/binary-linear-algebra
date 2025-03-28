@@ -51,6 +51,10 @@
             (aref return-array i (+ i n)) 1))
     return-array))
 
+(defun binary-matrix-symplectic-p (m)
+  (let ((omega (binary-symplectic-matrix (* 1/2 (array-dimension m 0)))))
+    (bmm= omega (bmm* (bt m) omega m))))
+
 (defun binary-ones-matrix (m n)
   (make-array (list m n)
               :element-type 'bit
@@ -394,8 +398,103 @@
                                                                          (setf (aref r (1- i) (1- j)) b)))))) ; step 7
     (bmm* l (bmm* (as-permutation-matrix s nil) r))))
 
+(defun random-not-zero (arg &optional (random-state *random-state*))
+  (let ((result (random arg random-state)))
+    (if (= 0.0 result)
+        (random-not-zero arg random-state)
+        result)))
+
+(defun sample-quantum-mallows (n &optional (random-state *random-state*))
+  "Algorithm 1 in Section 3 of Bravyi and Maslov."
+  (let ((a (vector-iota n))
+        (h (b0v n))
+        (s (cl-permutation:perm-identity n)))
+    (loop for i from 1 upto n do
+      (let* ((m (length a))
+             (random (random-not-zero 1.0 random-state))
+             (index (+ 1 (* 2 m) (- (ceiling (log (+ 1 (* random (1- (expt 4 m)))) 2))))))
+        (setf (aref h (1- i)) (if (<= index m) 1 0))
+        (let ((k (if (<= index m) index (+ (* 2 m) (- index) 1))))
+          (let ((j (aref a (- m k))))
+            (setf (aref (cl-permutation::perm.rep s) i) (1+ j))
+            (setf a (remove j a))))))
+    (values h s)))
+
+(defun rotate-rows! (matrix row-1 row-2)
+  (declare (type (array bit (* *)) matrix))
+  (declare (type integer row-1 row-2))
+  (dotimes (i (second (array-dimensions matrix)))
+    (rotatef (aref matrix row-1 i) (aref matrix row-2 i)))
+  matrix)
+
+(defun apply-hadamards! (u h n)
+  (loop for i from 0 below n do
+    (when (= 1 (aref h i))
+      (rotate-rows! u i (+ i n)))))
+(defun matrix-row (matrix i)
+  (destructuring-bind (m n) (array-dimensions matrix)
+    (assert (< i m))
+    (let ((column (b0v n)))
+      (loop for j from 0 below n do (setf (aref column j) (aref matrix i j)))
+      column)))
+
+(defun set-matrix-row (matrix i row)
+  (destructuring-bind (m n) (array-dimensions matrix)
+    (loop for j from 0 below n do
+      (setf (aref matrix i j) (aref row j)))))
+
+(defun permute-matrix (s f2 n)
+  (let ((return-matrix (b0m (* 2 n) (* 2 n))))
+    (flet ((s (i) (1- (aref (cl-permutation::perm.rep s) (1+ i)))))
+      (loop for i from 0 below n do
+        (progn
+          (set-matrix-row return-matrix i (matrix-row f2 (s i)))
+          (set-matrix-row return-matrix (+ i n) (matrix-row f2 (+ n (s i)))))))
+    return-matrix))
+
 (defun random-binary-symplectic-matrix (n)
-  (error "not implemented yet"))
+  "Returns a random symplectic matrix. Runs in quadratic time."
+  (multiple-value-bind (h s) (sample-quantum-mallows n)
+    (let ((delta (bim n))
+          (delta-prime (bim n))
+          (gamma (b0m n n))
+          (gamma-prime (b0m n n)))
+      (flet ((s (i) (1- (aref (cl-permutation::perm.rep s) (1+ i))))) ; zero indexed perms.
+        (loop for i from 0 below n do
+          (progn
+            (setf (aref gamma-prime i i) (random 2))
+            (when (= 1 (aref h i))
+              (setf (aref gamma i i) (random 2)))))
+        (loop for j from 0 below n do
+          (loop for i from (1+ j) below n do
+            (progn
+              (let ((b (random 2)))
+                (setf (aref gamma-prime i j) b
+                      (aref gamma-prime j i) b))       ; step 12
+              (setf (aref delta-prime i j) (random 2)) ; step 13
+              (when (and (= (aref h i) 1) (= (aref h j) 1))
+                #1=(let ((b (random 2)))
+                     (setf (aref gamma i j) b
+                           (aref gamma j i) b))) ; step 15
+              (when (and (= (aref h i) 1) (= (aref h j) 0) (< (s i) (s j)))
+                #1#)                    ; step 18
+              (when (and (= (aref h i) 0) (= (aref h j) 1) (> (s i) (s j)))
+                #1#)                    ; step 21
+              (when (and (= (aref h i) 0) (= (aref h j) 1))
+                (setf (aref delta i j) (random 2)))
+              (when (and (= (aref h i) 1) (= (aref h j) 1) (> (s i) (s j)))
+                (setf (aref delta i j) (random 2)))
+              (when (and (= (aref h i) 0) (= (aref h j) 0) (< (s i) (s j)))
+                (setf (aref delta i j) (random 2))))))
+        (let* ((prod1 (bmm* gamma delta))
+               (prod2 (bmm* gamma-prime delta-prime))
+               (inv1 (ibm (bt delta)))
+               (inv2 (ibm (bt delta-prime)))
+               (f1 (block-matrix delta nil prod1 inv1))
+               (f2 (block-matrix delta-prime nil prod2 inv2))
+               (u (permute-matrix s f2 n)))
+          (apply-hadamards! u h n)
+          (bmm* f1 u))))))
 
 ;;;; Decompositions
 

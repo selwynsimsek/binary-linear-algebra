@@ -123,3 +123,8 @@
       (is (bmm= r (bmm* y a)))
       (is (binary-matrix-invertible-p y))
       (is (reduced-row-echelon-p r)))))
+
+(test binary-symplectic-matrix
+  (for-all* ((n (gen-integer :max 10 :min 0)))
+    (let ((m (random-binary-symplectic-matrix n)))
+      (is (binary-matrix-symplectic-p m)))))
